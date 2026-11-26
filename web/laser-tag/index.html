@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Creek Laser Tag</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%23120a24' stroke='%23ff3df2' stroke-width='3'/%3E%3Cpath d='M6 22 26 10' stroke='%2322f0ff' stroke-width='3'/%3E%3C/svg%3E">
+<style>
+  :root { --pink:#ff3df2; --cyan:#22f0ff; --ink:#eaf6ff; --bg:#07040f; --panel:rgba(10,6,26,.82); --line:rgba(34,240,255,.35); }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink); font-family:"Trebuchet MS",system-ui,sans-serif; overflow:hidden; user-select:none; -webkit-user-select:none; touch-action:none; }
+  canvas#view { position:fixed; inset:0; width:100%; height:100%; display:block; }
+  .hidden { display:none !important; }
+  button { font:inherit; cursor:pointer; }
+
+  /* lobby */
+  #lobby { position:fixed; inset:0; display:grid; place-items:center; background:radial-gradient(ellipse at 50% 30%, rgba(80,20,120,.55), rgba(7,4,15,.92) 70%); z-index:20; padding:16px; overflow:auto; }
+  .card { width:min(520px,100%); background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:28px 26px; box-shadow:0 0 60px rgba(255,61,242,.18), inset 0 0 30px rgba(34,240,255,.06); }
+  h1 { margin:0 0 4px; font-size:clamp(30px,7vw,46px); letter-spacing:.06em; line-height:1; font-style:italic; text-transform:uppercase;
+       background:linear-gradient(90deg,var(--cyan),var(--pink)); -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 0 12px rgba(255,61,242,.45)); }
+  .tag { margin:0 0 22px; opacity:.8; }
+  label.f { display:block; font-size:13px; letter-spacing:.12em; text-transform:uppercase; opacity:.75; margin:14px 0 6px; }
+  #name { width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--line); background:rgba(0,0,0,.35); color:var(--ink); font:inherit; font-size:18px; outline:none; }
+  #name:focus { border-color:var(--cyan); box-shadow:0 0 0 3px rgba(34,240,255,.2); }
+  #swatches { display:flex; gap:10px; flex-wrap:wrap; }
+  #swatches button { width:38px; height:38px; border-radius:50%; border:3px solid transparent; box-shadow:0 0 12px currentColor; }
+  #swatches button[aria-pressed=true] { border-color:#fff; transform:scale(1.12); }
+  #play { margin-top:24px; width:100%; padding:16px; font-size:22px; font-weight:bold; letter-spacing:.14em; text-transform:uppercase; border:0; border-radius:12px; color:#12021c;
+          background:linear-gradient(90deg,var(--cyan),var(--pink)); box-shadow:0 0 30px rgba(255,61,242,.45); }
+  #play:hover { filter:brightness(1.15); }
+  #play:disabled { opacity:.6; cursor:wait; }
+  .keys { margin-top:20px; display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:14px; opacity:.85; }
+  kbd { display:inline-block; min-width:24px; text-align:center; padding:2px 7px; border-radius:6px; border:1px solid var(--line); background:rgba(34,240,255,.08); font:inherit; font-size:12px; }
+  .err { color:#ff8a9a; min-height:1.2em; margin-top:10px; }
+
+  /* hud */
+  #hud { position:fixed; inset:0; pointer-events:none; z-index:5; }
+  #cross { position:absolute; left:50%; top:50%; width:22px; height:22px; transform:translate(-50%,-50%); }
+  #cross::before,#cross::after { content:""; position:absolute; background:var(--cyan); box-shadow:0 0 6px var(--cyan); }
+  #cross::before { left:10px; top:0; width:2px; height:22px; clip-path:polygon(0 0,100% 0,100% 35%,0 35%,0 65%,100% 65%,100% 100%,0 100%); }
+  #cross::after { top:10px; left:0; height:2px; width:22px; clip-path:polygon(0 0,35% 0,35% 100%,0 100%,0 0,65% 0,100% 0,100% 100%,65% 100%); }
+  #hitmark { position:absolute; left:50%; top:50%; width:34px; height:34px; transform:translate(-50%,-50%) rotate(45deg); opacity:0; transition:opacity .25s; }
+  #hitmark::before,#hitmark::after { content:""; position:absolute; background:#fff; box-shadow:0 0 8px #fff; }
+  #hitmark::before { left:16px; top:0; width:2px; height:34px; clip-path:polygon(0 0,100% 0,100% 30%,0 30%,0 70%,100% 70%,100% 100%,0 100%); }
+  #hitmark::after { top:16px; left:0; height:2px; width:34px; clip-path:polygon(0 0,30% 0,30% 100%,0 100%,0 0,70% 0,100% 0,100% 100%,70% 100%); }
+  #hitmark.on { opacity:1; transition:none; }
+  #hitmark.big::before,#hitmark.big::after { background:var(--pink); box-shadow:0 0 10px var(--pink); }
+  #top { position:absolute; top:12px; left:50%; transform:translateX(-50%); display:flex; gap:10px; align-items:center; }
+  .pill { background:var(--panel); border:1px solid var(--line); border-radius:999px; padding:6px 14px; font-weight:bold; letter-spacing:.06em; white-space:nowrap; }
+  #timer { font-variant-numeric:tabular-nums; font-size:20px; }
+  #hpwrap { position:absolute; left:18px; bottom:18px; display:flex; flex-direction:column; gap:8px; }
+  #hp { display:flex; gap:6px; }
+  #hp i { width:46px; height:14px; border-radius:4px; border:1px solid var(--cyan); background:var(--cyan); box-shadow:0 0 10px var(--cyan); transform:skewX(-20deg); }
+  #hp i.gone { background:transparent; box-shadow:none; opacity:.4; }
+  #powers { display:flex; gap:6px; }
+  .pw { padding:4px 10px; border-radius:8px; font-size:13px; font-weight:bold; color:#12021c; }
+  #me { font-size:13px; opacity:.85; }
+  #mini { position:absolute; right:14px; top:14px; width:180px; height:180px; border-radius:12px; border:1px solid var(--line); background:#000; box-shadow:0 0 20px rgba(34,240,255,.15); }
+  #feed { position:absolute; right:14px; top:206px; width:280px; display:flex; flex-direction:column; align-items:flex-end; gap:4px; font-size:14px; }
+  #feed div { background:var(--panel); padding:3px 10px; border-radius:8px; transition:opacity .6s; }
+  #feed b { font-weight:bold; }
+  #center { position:absolute; left:50%; top:30%; transform:translateX(-50%); text-align:center; font-size:30px; font-weight:bold; letter-spacing:.06em; text-shadow:0 0 16px rgba(255,61,242,.8); white-space:nowrap; transition:opacity .4s; }
+  #sub { position:absolute; left:50%; top:calc(30% + 44px); transform:translateX(-50%); text-align:center; font-size:18px; opacity:.9; white-space:nowrap; transition:opacity .4s; }
+  #vig { position:absolute; inset:0; box-shadow:inset 0 0 160px 40px rgba(255,30,60,.0); transition:box-shadow .35s; }
+  #vig.on { box-shadow:inset 0 0 160px 40px rgba(255,30,60,.55); transition:none; }
+  #dir { position:absolute; left:50%; top:50%; width:0; height:0; }
+  #dir i { position:absolute; left:-30px; top:-150px; width:60px; height:20px; border-radius:50%; border-top:5px solid #ff2a4a; filter:drop-shadow(0 0 6px #ff2a4a); opacity:0; transition:opacity .8s; transform-origin:30px 150px; }
+  #dir i.on { opacity:1; transition:none; }
+  #board, #roundend { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:min(560px,94vw); background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:18px 20px; z-index:8; }
+  #board h2, #roundend h2 { margin:0 0 12px; letter-spacing:.1em; text-transform:uppercase; font-size:18px; }
+  table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  th,td { text-align:left; padding:6px 8px; }
+  th { font-size:12px; letter-spacing:.1em; text-transform:uppercase; opacity:.7; }
+  td.n { text-align:right; } th.n { text-align:right; }
+  tr.mine td { background:rgba(34,240,255,.12); }
+  .dot { display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:8px; vertical-align:-1px; box-shadow:0 0 8px currentColor; background:currentColor; }
+  .botmark { font-size:11px; opacity:.6; margin-left:6px; }
+  #roundend .win { font-size:clamp(22px,5vw,32px); font-weight:bold; margin-bottom:12px; }
+
+  #heat { position:absolute; left:50%; top:calc(50% + 26px); width:70px; height:5px; transform:translateX(-50%); border-radius:3px; background:rgba(255,255,255,.12); overflow:hidden; opacity:0; transition:opacity .2s; }
+  #heat::before { content:""; position:absolute; inset:0; width:calc(var(--h,0) * 100%); background:var(--cyan); box-shadow:0 0 8px var(--cyan); }
+  #heat.hot::before { background:#ff8a1f; box-shadow:0 0 8px #ff8a1f; }
+  #heat.locked::before { background:#ff2a4a; box-shadow:0 0 10px #ff2a4a; animation:blink .25s steps(2) infinite; }
+  #heatlbl { position:absolute; left:50%; top:calc(50% + 34px); transform:translateX(-50%); font-size:12px; font-weight:bold; letter-spacing:.14em; color:#ff4d6d; text-shadow:0 0 8px #ff2a4a; opacity:0; }
+  #heat.locked + #heatlbl { opacity:1; }
+  @keyframes blink { 50% { opacity:.35; } }
+  #scope { position:absolute; inset:0; opacity:0; background:radial-gradient(circle at 50% 50%, transparent 0, transparent min(34vh,34vw), rgba(4,2,12,.92) calc(min(34vh,34vw) + 2px)); }
+  #scope::before { content:""; position:absolute; left:50%; top:50%; width:min(68vh,68vw); height:min(68vh,68vw); transform:translate(-50%,-50%); border-radius:50%; border:2px solid rgba(34,240,255,.6); box-shadow:0 0 18px rgba(34,240,255,.4), inset 0 0 40px rgba(34,240,255,.15); }
+  #scope::after { content:""; position:absolute; left:50%; top:50%; width:min(68vh,68vw); height:1px; transform:translate(-50%,-50%); background:linear-gradient(90deg,transparent,rgba(34,240,255,.5) 30%,transparent 46%,transparent 54%,rgba(34,240,255,.5) 70%,transparent); }
+
+  #mcam { position:absolute; inset:0; box-shadow:inset 0 0 120px 30px rgba(255,140,40,.35); background:repeating-linear-gradient(0deg, rgba(255,180,80,.05) 0 2px, transparent 2px 4px); }
+  #mcam .lbl { position:absolute; top:62px; left:50%; transform:translateX(-50%); font-weight:bold; letter-spacing:.16em; color:#ffb347; text-shadow:0 0 10px #ff7a00; font-size:clamp(11px, 2.2vw, 15px); width:max-content; max-width:92vw; text-align:center; }
+  #mfuel { position:absolute; bottom:60px; left:50%; width:240px; height:8px; transform:translateX(-50%); border:1px solid #ffb347; border-radius:4px; }
+  #mfuel::before { content:""; position:absolute; inset:1px; width:calc(var(--f,1) * 100% - 2px); background:#ffb347; box-shadow:0 0 10px #ff7a00; border-radius:3px; }
+  #mcam .ret { position:absolute; left:50%; top:50%; width:60px; height:60px; transform:translate(-50%,-50%); border:2px solid rgba(255,179,71,.8); border-radius:50%; }
+  #mcam.drone { box-shadow:inset 0 0 120px 30px rgba(180,140,255,.38); background:repeating-linear-gradient(0deg, rgba(180,140,255,.06) 0 2px, transparent 2px 4px); }
+  #mcam.drone .lbl { color:#d3bcff; text-shadow:0 0 10px #8a5cff; }
+  #mcam.drone #mfuel { border-color:#b48cff; } #mcam.drone #mfuel::before { background:#b48cff; box-shadow:0 0 10px #8a5cff; }
+  #mcam.drone .ret { border-color:rgba(180,140,255,.8); border-radius:8px; }
+  #lockbox { position:absolute; width:46px; height:46px; transform:translate(-50%,-50%); border:2px solid #ff2a4a; box-shadow:0 0 12px #ff2a4a; animation:blink .3s steps(2) infinite; }
+  #lockbox::after { content:"LOCKED · " attr(data-name); position:absolute; top:52px; left:50%; transform:translateX(-50%); white-space:nowrap; font-size:12px; font-weight:bold; color:#ff4d6d; letter-spacing:.1em; }
+  #tmis { right:28px; bottom:150px; width:64px; height:64px; border-color:#ffb347; background:rgba(255,179,71,.2); font-size:11px; }
+
+  /* pause */
+  #pause { position:fixed; inset:0; display:grid; place-items:center; background:rgba(7,4,15,.6); z-index:15; padding:16px; }
+  #pause .card { text-align:center; }
+  #pause h2 { margin:0 0 14px; letter-spacing:.12em; }
+  .row { display:flex; gap:12px; align-items:center; justify-content:space-between; margin:12px 0; text-align:left; }
+  .row input[type=range] { flex:1; max-width:220px; accent-color:var(--pink); }
+  .btn { padding:12px 18px; border-radius:10px; border:1px solid var(--line); background:rgba(34,240,255,.1); color:var(--ink); }
+  .btn.main { background:linear-gradient(90deg,var(--cyan),var(--pink)); color:#12021c; font-weight:bold; border:0; }
+  .btns { display:flex; gap:10px; justify-content:center; margin-top:16px; flex-wrap:wrap; }
+
+  /* touch: phones and tablets */
+  #touch { position:fixed; inset:0; z-index:6; --b:clamp(54px, 9vmin, 84px); --f:clamp(88px, 15vmin, 132px); }
+  #stick { position:absolute; left:calc(24px + var(--f) * .7); top:calc(100% - 24px - var(--f) * .7); width:calc(var(--f) * 1.4); height:calc(var(--f) * 1.4); transform:translate(-50%,-50%);
+           border-radius:50%; border:2px solid var(--line); background:rgba(34,240,255,.06); opacity:.45; pointer-events:none; transition:opacity .15s; }
+  #stick.on { opacity:1; }
+  #stick.sprint { border-color:#7dff3d; box-shadow:0 0 20px rgba(125,255,61,.4); }
+  #knob { position:absolute; left:50%; top:50%; width:44%; height:44%; transform:translate(-50%,-50%); border-radius:50%; background:rgba(34,240,255,.35); box-shadow:0 0 14px var(--cyan); }
+  #stick.sprint #knob { background:rgba(125,255,61,.5); box-shadow:0 0 16px #7dff3d; }
+  #stick::after { content:"MOVE · push to the edge to sprint"; position:absolute; left:50%; top:calc(100% + 6px); transform:translateX(-50%); font-size:11px; letter-spacing:.08em; opacity:.6; white-space:nowrap; }
+  #stick.on::after { content:none; }
+  .tbtn { position:absolute; border-radius:50%; border:2px solid var(--pink); background:rgba(255,61,242,.18); color:#fff; font-weight:bold; display:grid; place-items:center; font-size:clamp(11px, 1.7vmin, 15px); letter-spacing:.06em; -webkit-tap-highlight-color:transparent; }
+  .tbtn.on, .tbtn:active { filter:brightness(1.6); transform:scale(.96); }
+  #tfire { right:24px; bottom:24px; width:var(--f); height:var(--f); font-size:clamp(14px, 2.4vmin, 20px); }
+  #tfire::after { content:"hold + drag to aim"; position:absolute; top:calc(100% + 2px); font-size:10px; font-weight:normal; opacity:.6; white-space:nowrap; }
+  #tjump { right:calc(36px + var(--f)); bottom:18px; width:var(--b); height:var(--b); border-color:var(--cyan); background:rgba(34,240,255,.15); }
+  #tzoom { right:calc(40px + var(--f)); bottom:calc(30px + var(--b)); width:var(--b); height:var(--b); border-color:var(--cyan); background:rgba(34,240,255,.1); }
+  #tzoom.on { background:rgba(34,240,255,.45); }
+  #tmis { right:calc(24px + (var(--f) - var(--b)) / 2); bottom:calc(36px + var(--f)); width:var(--b); height:var(--b); border-color:#ffb347; background:rgba(255,179,71,.2); }
+  #tdrone { right:calc(40px + var(--f)); bottom:calc(42px + 2 * var(--b)); width:var(--b); height:var(--b); border-color:#b48cff; background:rgba(180,140,255,.25); }
+  #tmenu, #tboard { top:calc(18px + 96px); width:44px; height:44px; border-color:var(--line); background:var(--panel); font-size:18px; }
+  #tmenu { left:18px; } #tboard { left:70px; }
+  .touching #hpwrap { left:18px; right:auto; top:14px; bottom:auto; display:flex; flex-direction:column-reverse; }
+  .touching #hp i { width:34px; height:11px; }
+  .touching #center { top:22%; } .touching #sub { top:calc(22% + 40px); }
+  @media (max-width:700px) {
+    #mini { width:120px; height:120px; }
+    #feed { top:144px; width:200px; font-size:12px; }
+    #center { font-size:22px; } #sub { font-size:15px; top:calc(30% + 34px); }
+    #hp i { width:32px; height:11px; }
+    #top { top:8px; } .pill { padding:4px 10px; font-size:13px; } #timer { font-size:16px; }
+  }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js", "three/addons/": "./vendor/jsm/" } }
+</script>
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="vig"></div>
+  <div id="dir"><i></i></div>
+  <div id="scope"></div>
+  <div id="cross"></div>
+  <div id="mcam" class="hidden"><div class="ret"></div><div class="lbl" id="mlbl">MISSILE · STEER · CLICK OR Q TO DETONATE</div><div id="mfuel"></div></div>
+  <div id="lockbox" class="hidden"></div>
+  <div id="heat"></div><div id="heatlbl">OVERHEATED</div>
+  <div id="hitmark"></div>
+  <div id="top"><span class="pill" id="timer">5:00</span><span class="pill" id="rank">—</span></div>
+  <canvas id="mini" width="360" height="360"></canvas>
+  <div id="feed"></div>
+  <div id="center"></div>
+  <div id="sub"></div>
+  <div id="hpwrap"><div id="powers"></div><div id="hp"></div><div id="me"></div></div>
+</div>
+
+<div id="board" class="hidden"><h2>Scoreboard</h2><table><thead><tr><th>Player</th><th class="n">Tags</th><th class="n">Tagged</th><th class="n">Best streak</th></tr></thead><tbody></tbody></table></div>
+<div id="roundend" class="hidden"><h2>Round over</h2><div class="win"></div><table><thead><tr><th>Player</th><th class="n">Tags</th><th class="n">Tagged</th></tr></thead><tbody></tbody></table><p id="nextround"></p></div>
+
+<div id="touch" class="hidden">
+  <div id="stick"><div id="knob"></div></div>
+  <div class="tbtn" id="tfire">FIRE</div>
+  <div class="tbtn" id="tjump">JUMP</div>
+  <div class="tbtn" id="tzoom">ZOOM</div>
+  <div class="tbtn" id="tmis">MISSILE</div>
+  <div class="tbtn hidden" id="tdrone">DRONE</div>
+  <div class="tbtn" id="tmenu" aria-label="Menu">☰</div>
+  <div class="tbtn" id="tboard" aria-label="Scoreboard">🏆</div>
+</div>
+
+<div id="pause" class="hidden">
+  <div class="card">
+    <h2>PAUSED</h2>
+    <p style="opacity:.75;margin:0 0 8px">You're still in the arena. Others can still tag you.</p>
+    <div class="row"><span>Mouse sensitivity</span><input type="range" id="sens" min="0.2" max="3" step="0.05"></div>
+    <div class="row"><span>Glow effects</span><button class="btn" id="glow" type="button">On</button></div>
+    <div class="btns"><button class="btn main" id="resume" type="button">Resume</button><button class="btn" id="leave" type="button">Leave game</button></div>
+  </div>
+</div>
+
+<div id="lobby">
+  <div class="card">
+    <h1>Creek Laser Tag</h1>
+    <p class="tag">Neon tag on the creek, player against player. Hide in the channel, hold the hill, and grab the power-ups.</p>
+    <label class="f" for="name">Your name</label>
+    <input id="name" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Name">
+    <label class="f">Your colour</label>
+    <div id="swatches"></div>
+    <button id="play" type="button">Play</button>
+    <div class="err" id="err"></div>
+    <div class="keys" id="touchhelp">
+      <span>Left thumb</span><span>Move: the stick appears where you touch. Push to the edge to sprint</span>
+      <span>Right thumb</span><span>Drag to look. Hold <b>FIRE</b> and drag to aim while shooting</span>
+      <span>Buttons</span><span><b>JUMP</b> (tap again in the air) · <b>ZOOM</b> · <b>MISSILE</b>: you become it, drag to steer, tap FIRE to blow it up. Shoot enemy missiles down with your laser</span>
+      <span>☰ · 🏆</span><span>Menu and look speed · scoreboard</span>
+      <span style="color:#ffe23d">◆ Power-ups</span><span>Rapid, Overcharge, Speed, and <b style="color:#b48cff">Drone</b>: tap DRONE, fly it with the stick, tap FIRE to blow it up</span>
+    </div>
+    <div class="keys" id="keyhelp">
+      <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>Move · <kbd>Shift</kbd> sprint</span>
+      <span><kbd>Mouse</kbd></span><span>Aim · click or hold to fire</span>
+      <span><kbd>Right-click</kbd></span><span>Hold to zoom (or hold <kbd>Z</kbd>)</span>
+      <span><kbd>Q</kbd></span><span>Missile: you become it. Steer with the mouse, it homes on anyone in front, click to blow it up. Your body stays behind! Shoot enemy missiles out of the sky with your laser.</span>
+      <span><kbd>E</kbd></span><span><b style="color:#b48cff">Drone</b> power-up: fly it with WASD and the mouse, Space / Shift up and down, click to blow it up. Big blast!</span>
+      <span style="color:#ff8a1f">Heat</span><span>Firing heats your blaster. Overheat it and it locks for 2 s</span>
+      <span><kbd>Space</kbd></span><span>Jump (and jump again in the air)</span>
+      <span><kbd>Tab</kbd></span><span>Scoreboard · <kbd>Esc</kbd> pause</span>
+      <span style="color:#ffe23d">◆ Rapid</span><span>Fires much faster</span>
+      <span style="color:#ff4d6d">◆ Overcharge</span><span>One hit tags anyone out</span>
+      <span style="color:#7dff3d">◆ Speed</span><span>Run faster</span>
+      <span style="color:#b48cff">◆ Drone</span><span>One drone to fly (E)</span>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./game.js"></script>
+</body>
+</html>
