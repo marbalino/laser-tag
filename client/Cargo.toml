@@ -1,0 +1,35 @@
+[package]
+name = "lasertag-client"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lasertag-shared = { path = "../shared" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+glam = "0.29"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+console_error_panic_hook = "0.1"
+
+[dependencies.web-sys]
+version = "0.3"
+features = [
+  "Window", "Document", "Element", "HtmlElement", "HtmlCanvasElement", "HtmlInputElement", "HtmlButtonElement",
+  "CssStyleDeclaration", "DomTokenList", "Node", "NodeList", "HtmlCollection", "Event", "EventTarget", "KeyboardEvent",
+  "MouseEvent", "PointerEvent", "TouchEvent", "Touch", "TouchList", "FocusEvent", "UiEvent",
+  "WebGl2RenderingContext", "WebGlProgram", "WebGlShader", "WebGlBuffer", "WebGlVertexArrayObject",
+  "WebGlUniformLocation", "WebGlTexture", "WebGlFramebuffer", "WebGlRenderbuffer", "WebGlContextAttributes",
+  "CanvasRenderingContext2d", "ImageData", "TextMetrics", "CanvasGradient",
+  "WebSocket", "MessageEvent", "CloseEvent", "BinaryType",
+  "Storage", "Performance", "Navigator", "MediaQueryList", "Location",
+  "Request", "RequestInit", "Response",
+  "AudioContext", "BaseAudioContext", "AudioNode", "AudioParam", "AudioDestinationNode", "GainNode",
+  "OscillatorNode", "OscillatorType", "StereoPannerNode", "BiquadFilterNode", "BiquadFilterType",
+  "AudioBuffer", "AudioBufferSourceNode", "AudioScheduledSourceNode", "AudioContextState",
+  "AddEventListenerOptions", "EventListener", "DomRect", "console",
+]

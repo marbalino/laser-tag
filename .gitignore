@@ -1,3 +1,6 @@
-venv/
+target/
+bin/
+web/laser-tag/pkg/
 __pycache__/
 *.pyc
+venv/

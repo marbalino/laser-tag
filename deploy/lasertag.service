@@ -1,5 +1,5 @@
 [Unit]
-Description=Creek Laser Tag game server (websockets on /run/lasertag/ws.sock; nginx serves it on port 8802)
+Description=Creek Laser Tag game server, Rust (websockets on /run/lasertag/ws.sock; nginx serves it on port 8802)
 After=network.target
 
 [Service]
@@ -7,7 +7,7 @@ User=lasertag
 Group=lasertag
 RuntimeDirectory=lasertag
 RuntimeDirectoryMode=0755
-ExecStart=/opt/lasertag/venv/bin/python -u /opt/lasertag/server/game.py /run/lasertag/ws.sock
+ExecStart=/opt/lasertag/bin/lasertag-server /run/lasertag/ws.sock
 Environment=LASERTAG_WEB=/opt/lasertag/web/laser-tag
 Restart=always
 RestartSec=2

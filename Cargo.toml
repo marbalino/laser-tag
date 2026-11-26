@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = ["shared", "server", "client"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[profile.release.package.lasertag-client]
+opt-level = "s"
