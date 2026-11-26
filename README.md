@@ -142,9 +142,12 @@ Give these to the chat AI with every change.
 5. **Directions:** `yaw` 0 looks towards -z, and turning right increases it; `pitch` up is positive. A direction
    from yaw and pitch is `[sin(yaw) cos(pitch), sin(pitch), -cos(yaw) cos(pitch)]` (`dir_of` in the client).
 6. **The arena test.** `cargo test` checks that the arena is exactly the one in `ref/arena.json`. If you change
-   the arena on purpose (`server/src/arena.rs`, the seed, or `SPOT_KINDS`), the check will fail with "box ...
-   differs" or "spot ... differs". Then also delete the test `arena_matches_python` at the bottom of
-   `server/src/main.rs` (or ask the owner to regenerate `ref/arena.json`) in the same commit.
+   the arena on purpose (`server/src/arena.rs`, the seed, `SPOT_KINDS`, or the maths in `shared/src/lib.rs`'s
+   `dmath`), the check will fail with "box ... differs" or "spot ... differs". Then also delete the test
+   `arena_is_unchanged` near the bottom of `server/src/main.rs` in the same commit, or ask the owner to refresh
+   `ref/arena.json`. Everything that decides where walls, pillars and spots go must use `dmath` (`sin`, `cos`,
+   `atan2`, `hypot`), not Rust's `.sin()` and so on: those can differ in the last digit from one computer to
+   another, and then two machines build two different arenas.
 7. **Keep `window.__lt`** (`debug_hook` in `client/src/lib.rs`) and `debug_state`: the tests use them.
 8. **Never put the site's password, or any password or key, in the repo.** It is public.
 9. **Give back whole files or whole functions**, never "...rest unchanged".
@@ -216,7 +219,8 @@ match checks the round end too). `ref/browser_test.py` drives real pages with Pl
 - `server/`: the authoritative game server (tokio + tungstenite). It judges hits with lag-compensated rewind (it
   rewinds everyone to what the shooter saw, up to half a second), and runs rounds, power-ups, missiles, drones
   and bots. It sends everyone a snapshot 20 times a second. The arena is built from seed 415 with a port of
-  Python's random generator, so it is the same arena the original Python server built.
+  Python's random generator and machine-independent maths (`dmath`), so it is the same on every computer. It is
+  the arena the original Python server built, except for one short wall whose window sits 9 ft further along.
 - `client/`: the browser game. `lib.rs` starts it and wires up the page; `game.rs` is the game (state, messages,
   movement, shooting, missiles, the frame); `render.rs`, `gl.rs`, `geom.rs` and `shaders.rs` draw it (ACES tone
   mapping and bloom); `world.rs` is the fixed scenery; `hud.rs` the HUD and minimap; `audio.rs` the sounds.

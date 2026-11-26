@@ -4,6 +4,23 @@
 //! collision maths both sides use, and the messages they send each other.
 
 pub mod ground;
+/// Maths that comes out the same to the last bit on every machine (software, not the CPU's or the system's
+/// library), for everything that decides where the arena's walls, pillars and power-ups go. Without it, a
+/// different computer can build a slightly different arena from the same seed.
+pub mod dmath {
+    pub fn sin(x: f64) -> f64 {
+        libm::sin(x)
+    }
+    pub fn cos(x: f64) -> f64 {
+        libm::cos(x)
+    }
+    pub fn atan2(y: f64, x: f64) -> f64 {
+        libm::atan2(y, x)
+    }
+    pub fn hypot(x: f64, y: f64) -> f64 {
+        libm::hypot(x, y)
+    }
+}
 pub mod protocol;
 pub mod solids;
 

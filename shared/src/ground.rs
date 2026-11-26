@@ -66,7 +66,7 @@ impl Ground {
         let e = 4.0;
         let a = self.at(x + e, z) - self.at(x - e, z);
         let b = self.at(x, z + e) - self.at(x, z - e);
-        a.hypot(b) / (2.0 * e)
+        crate::dmath::hypot(a, b) / (2.0 * e)
     }
 
     /// Distance along the ray to where it goes into the ground, or None.

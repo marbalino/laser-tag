@@ -3,6 +3,7 @@
 
 use lasertag_shared::protocol::Spot;
 use lasertag_shared::solids::{Pillar, WallBox, Window};
+use lasertag_shared::dmath::{atan2, cos, hypot, sin};
 use lasertag_shared::{round_to, Ground, Solids};
 use std::f64::consts::PI;
 
@@ -34,9 +35,9 @@ impl<'a> Builder<'a> {
     /// ruined wall has a ragged top and some lintels gone.
     #[allow(clippy::too_many_arguments)]
     fn add_wall(&mut self, x0: f64, z0: f64, x1: f64, z1: f64, base: f64, h: f64, t: f64, mut openings: Vec<Opening>, tint: u32, ruin: bool) {
-        let l = (x1 - x0).hypot(z1 - z0);
+        let l = hypot(x1 - x0, z1 - z0);
         let (ux, uz) = ((x1 - x0) / l, (z1 - z0) / l);
-        let a = (-uz).atan2(ux);
+        let a = atan2(-uz, ux);
         let mut boxes = std::mem::take(&mut self.boxes);
         let mut add = |s0: f64, s1: f64, y0: f64, y1: f64| {
             if s1 - s0 < 0.3 || y1 - y0 < 0.3 {
@@ -130,7 +131,7 @@ impl<'a> Builder<'a> {
         let size = self.g.size;
         let tints: [u32; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
         let free = |taken: &Vec<(f64, f64, f64)>, x: f64, z: f64, r: f64, gap: f64| {
-            taken.iter().all(|&(a, b, c)| (x - a).hypot(z - b) > r + c + gap)
+            taken.iter().all(|&(a, b, c)| hypot(x - a, z - b) > r + c + gap)
                 && 40.0 < x
                 && x < size - 40.0
                 && 40.0 < z
@@ -145,11 +146,11 @@ impl<'a> Builder<'a> {
             let w: f64 = self.rnd.choice(&[22.0, 26.0, 30.0, 36.0, 40.0]);
             let d: f64 = self.rnd.choice(&[18.0, 22.0, 26.0, 30.0]);
             let a = self.rnd.uniform(0.0, PI);
-            let r = w.hypot(d) / 2.0;
+            let r = hypot(w, d) / 2.0;
             if !free(taken, bx, bz, r, 35.0) {
                 continue;
             }
-            let (ca, sa) = (a.cos(), a.sin());
+            let (ca, sa) = (cos(a), sin(a));
             let wp = |lx: f64, lz: f64| (bx + ca * lx + sa * lz, bz - sa * lx + ca * lz);
             let mut pts = Vec::new();
             for i in [-1.0, 0.0, 1.0] {
@@ -175,7 +176,7 @@ impl<'a> Builder<'a> {
             for (k, (p0, p1)) in walls.iter().enumerate() {
                 let (x0, z0) = wp(p0.0, p0.1);
                 let (x1, z1) = wp(p1.0, p1.1);
-                let l = (x1 - x0).hypot(z1 - z0);
+                let l = hypot(x1 - x0, z1 - z0);
                 let ops = self.openings_for(l, k == door);
                 self.add_wall(x0, z0, x1, z1, base, h, t, ops, tint, true);
             }
@@ -194,8 +195,8 @@ impl<'a> Builder<'a> {
                 if !free(taken, cx, cz, l / 2.0, 18.0) {
                     continue;
                 }
-                let (x0, z0) = (cx - a.cos() * l / 2.0, cz - a.sin() * l / 2.0);
-                let (x1, z1) = (cx + a.cos() * l / 2.0, cz + a.sin() * l / 2.0);
+                let (x0, z0) = (cx - cos(a) * l / 2.0, cz - sin(a) * l / 2.0);
+                let (x1, z1) = (cx + cos(a) * l / 2.0, cz + sin(a) * l / 2.0);
                 let pts: Vec<(f64, f64)> =
                     [0.0, 0.25, 0.5, 0.75, 1.0].iter().map(|&f| (x0 + (x1 - x0) * f, z0 + (z1 - z0) * f)).collect();
                 let (lo, hi, wet) = self.ground_span(&pts);
@@ -235,7 +236,7 @@ pub fn build_arena(g: &Ground, seed: u64) -> Arena {
         if g.water(x, z) || g.slope(x, z) > 0.5 {
             continue;
         }
-        if taken.iter().any(|&(a, bb, c)| (x - a).hypot(z - bb) < c + r + 30.0) {
+        if taken.iter().any(|&(a, bb, c)| hypot(x - a, z - bb) < c + r + 30.0) {
             continue;
         }
         let mut lo = f64::INFINITY;
@@ -261,10 +262,10 @@ pub fn build_arena(g: &Ground, seed: u64) -> Arena {
         if g.water(x, z) || g.slope(x, z) > 0.4 || walls_only.in_box(x, z, 4.0) {
             continue;
         }
-        if pillars.iter().any(|p| (x - p.0).hypot(z - p.1) < p.2 + 12.0) {
+        if pillars.iter().any(|p| hypot(x - p.0, z - p.1) < p.2 + 12.0) {
             continue;
         }
-        if spots.iter().any(|s| (x - s.x).hypot(z - s.z) < 220.0) {
+        if spots.iter().any(|s| hypot(x - s.x, z - s.z) < 220.0) {
             continue;
         }
         spots.push(Spot {

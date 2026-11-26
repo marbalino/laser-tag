@@ -16,7 +16,7 @@ use std::time::{Duration, Instant};
 
 use futures_util::{SinkExt, StreamExt};
 use lasertag_shared::protocol::ServerMsg;
-use lasertag_shared::{dist3, py_mod, Ground, GroundMeta, PALETTE};
+use lasertag_shared::{py_mod, Ground, GroundMeta, PALETTE};
 use serde_json::Value;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::mpsc;
@@ -379,9 +379,11 @@ mod tests {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../web/laser-tag")
     }
 
-    /// The arena must come out exactly as the Python server built it (ref/arena.json was dumped from it).
+    /// The arena must come out exactly as ref/arena.json, on every machine. If you change the arena on purpose,
+    /// regenerate it: `cargo test -p lasertag-server dump_arena -- --ignored` writes target/arena.json; copy that
+    /// over ref/arena.json (or delete this test).
     #[test]
-    fn arena_matches_python() {
+    fn arena_is_unchanged() {
         let g = load_ground(&web());
         let a = arena::build_arena(&g, 415);
         let want: Value =
@@ -422,6 +424,18 @@ mod tests {
         // a ray straight through a standing body's spine
         let (d, s) = game::seg_ray_dist([0.0, 3.0, 10.0], [0.0, 0.0, -1.0], 100.0, [0.0, 1.4, 0.0], [0.0, 5.2, 0.0]);
         assert!(d < 1e-9 && (s - 10.0).abs() < 1e-9);
-        let _ = dist3([0.0; 3], [1.0; 3]);
+    }
+}
+
+/// Writes the arena to target/arena.json (run with --ignored), to refresh ref/arena.json after an arena change.
+#[cfg(test)]
+mod dump {
+    #[test]
+    #[ignore]
+    fn dump_arena() {
+        let g = super::load_ground(&std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../web/laser-tag"));
+        let a = super::arena::build_arena(&g, 415);
+        let v = serde_json::json!({"pillars": a.pillars, "spots": a.spots, "boxes": a.boxes, "windows": a.windows});
+        std::fs::write(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../target/arena.json"), v.to_string()).unwrap();
     }
 }
