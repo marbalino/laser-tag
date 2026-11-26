@@ -1,0 +1,29 @@
+# Runs on every commit: does it compile, do the tests pass, does a scripted two-player match still work?
+# A green tick on the commit means yes; a red cross means look at the log (Actions tab) before going live.
+name: check
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Tests (arena, maths, messages)
+        run: cargo test -p lasertag-shared -p lasertag-server
+      - name: Build the game server
+        run: cargo build --release -p lasertag-server
+      - name: Build the browser game (WebAssembly)
+        run: cargo build --release -p lasertag-client --target wasm32-unknown-unknown
+      - name: Scripted two-player match against the new server
+        run: |
+          pip install -q websockets
+          LASERTAG_WEB=web/laser-tag LASERTAG_ROUND_S=25 LASERTAG_INTERMISSION_S=3 target/release/lasertag-server 127.0.0.1:8899 &
+          sleep 1
+          python3 ref/match_test.py ws://127.0.0.1:8899
